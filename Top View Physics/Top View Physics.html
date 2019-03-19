@@ -1,0 +1,354 @@
+﻿<!doctype html>
+<html>
+<head>
+  <title> JS Map Creator </title>
+  <meta charset="utf-8"></meta>
+  <link rel="stylesheet" type="text/css" href="scripts/canvas.css"></link>
+  <script type="text/javascript" src="scripts/logicalFunctions.js"></script>
+</head>
+<body bgcolor = "#36F" oncontextmenu = "return false">
+<script>
+  var
+    canvas,
+    ctx,
+    frames = 0,
+    width = 1080,
+    height = 540,
+
+  	scl = 4, //NUMEROS PARES QUE DIVIDEM 1
+  	zoom = 1,
+  	offset = {x: 0, y: 0},
+
+    p1 = {x: 100, y: 100, radius: 30, dx: 0, dy: 0, accel: 0, angle: 0, score: 0, energy: 100},
+    p2 = {x: 250, y: 250, radius: 30, dx: 0, dy: 0, accel: 0, angle: 0, score: 0, energy: 100},
+
+    p1Keys = {u: 87, l: 65, d: 83, r: 68},
+    p2Keys = {u: 73, l: 74, d: 75, r: 76},
+
+    p1Control = {u: false, l: false, d: false, r: false},
+    p2Control = {u: false, l: false, d: false, r: false};
+
+
+
+  /*
+    function mDown(evt){
+
+    }
+
+    function mUp(evt){
+
+    }
+
+    function mWheel(evt){
+
+    }
+
+    function mMove(evt){
+
+    }
+  */
+
+  function checkCollision(Ball, Ball2){
+    if(circleCollision(Ball, Ball2)){
+      var v = vetorUnit(Ball, Ball2);
+      var dx = Ball2.x - Ball.x;
+      var dy = Ball2.y - Ball.y;
+
+      var vetorFx = 2*(Ball.radius)*v.x - dx;
+      var vetorFy = 2*(Ball.radius)*v.y - dy;
+
+      Ball.x -= vetorFx/2;
+      Ball.y -= vetorFy/2;
+
+      Ball2.x += vetorFx/2;
+      Ball2.y += vetorFy/2;
+
+      //VELOCITY & ACCELERATION
+
+      velAbs1 = Math.hypot(Ball.dx, Ball.dy);
+      velAbs2 = Math.hypot(Ball2.dx, Ball2.dy);
+      //velAbs = (velAbs1 + velAbs2)/2;
+      velAbs = (velAbs1 + velAbs2);
+
+      Ball.accel = Ball2.accel = 0;
+      //Ball.accel /= 2;
+      //Ball.accel /= 2;
+
+      Ball.dx = -velAbs*v.x;
+      Ball.dy = -velAbs*v.y;
+
+      Ball2.dx = velAbs*v.x;
+      Ball2.dy = velAbs*v.y;
+
+      
+
+    }
+  }
+
+  function controlBall(Ball, Control){
+    var acc = 0.025;
+    var accMax = 0.5;
+    var angleSpd = 2/50;
+
+    if(Control.l){
+      if(Ball.angle == 0)
+        Ball.angle = 2;
+      Ball.angle -= angleSpd;
+    }
+    else if(Control.r){
+      if(Ball.angle == 2)
+        Ball.angle = 0;
+      Ball.angle += angleSpd;
+    }
+
+    if(Control.u){
+      Ball.accel += acc;
+      if(Ball.accel > accMax)
+        Ball.accel = accMax;
+    }
+    else if(Control.d){
+      Ball.accel -= acc;
+      if(Ball.accel < -accMax)
+        Ball.accel = -accMax;
+    }
+    else
+      Ball.accel = 0;
+
+    Ball.dx += Ball.accel * Math.cos(Ball.angle * Math.PI);
+    Ball.dy += Ball.accel * Math.sin(Ball.angle * Math.PI);
+
+    var v = vetorUnit({x: 0, y: 0}, {x: Ball.dx, y: Ball.dy});
+    var vetorVel = Math.hypot(Ball.dx, Ball.dy);
+    var atrito = 0.05;
+
+    Ball.dx -= v.x * atrito * vetorVel;
+    if(Math.abs(Ball.dx) < 0.01)
+      Ball.dx = 0;
+
+    Ball.dy -= v.y * atrito * vetorVel;
+    if(Math.abs(Ball.dy) < 0.01)
+      Ball.dy = 0;
+
+
+    Ball.x += Ball.dx;
+    Ball.y += Ball.dy;
+  }
+
+  function boundBall(Ball){
+    if(Ball.x + Ball.radius/2 > width * scl){
+      Ball.x = width * scl - Ball.radius/2;
+      Ball.dx /= -1;
+    }
+    else if(Ball.x - Ball.radius/2 < 0){
+      Ball.x = Ball.radius/2;
+      Ball.dx /= -1;
+    }
+
+    if(Ball.y + Ball.radius/2 > height * scl){
+      Ball.y = height * scl - Ball.radius/2;
+      Ball.dy /= -1;
+    }
+    else if(Ball.y - Ball.radius/2 < 0){
+      Ball.y = Ball.radius/2;
+      Ball.dy /= -1;
+    }
+  }
+
+  function drawBall(Ball){
+    ctx.beginPath();
+    ctx.arc(Ball.x -offset.x, Ball.y -offset.y, Ball.radius, 0, 2*Math.PI, false);
+    ctx.fill();
+
+    //Direcao
+    ctx.fillStyle = "#000";
+    ctx.beginPath();
+    ctx.arc(Ball.x + Ball.radius * Math.cos(Ball.angle * Math.PI) -offset.x, Ball.y + Ball.radius * Math.sin(Ball.angle * Math.PI) -offset.y, 5, 0, 2*Math.PI, false);
+    ctx.fill();
+
+  	/*
+      ctx.fillStyle = "#000";
+      ctx.fillText(Ball.score, Ball.x -ctx.measureText(Ball.score).width/2, Ball.y +5);
+
+      ctx.lineWidth = 5;
+      ctx.beginPath();
+      ctx.arc(Ball.x, Ball.y, Ball.radius -15, 0, (Ball.energy/50)*Math.PI, false);
+      ctx.stroke();
+  	*/
+  }
+
+  function keyDown(evt){
+    console.log(evt.keyCode);
+    switch(evt.keyCode){
+      case p1Keys.u:
+        p1Control.u = true;
+        break;
+      case p1Keys.l:
+        p1Control.l = true;
+        break;
+      case p1Keys.d:
+        p1Control.d = true;
+        break;
+      case p1Keys.r:
+        p1Control.r = true;
+        break;
+
+      case p2Keys.u:
+        p2Control.u = true;
+        break;
+      case p2Keys.l:
+        p2Control.l = true;
+        break;
+      case p2Keys.d:
+        p2Control.d = true;
+        break;
+      case p2Keys.r:
+        p2Control.r = true;
+        break;
+    }
+  }
+
+  function keyUp(evt){
+    switch(evt.keyCode){
+      case p1Keys.u:
+        p1Control.u = false;
+        break;
+      case p1Keys.l:
+        p1Control.l = false;
+        break;
+      case p1Keys.d:
+        p1Control.d = false;
+        break;
+      case p1Keys.r:
+        p1Control.r = false;
+        break;
+
+      case p2Keys.u:
+        p2Control.u = false;
+        break;
+      case p2Keys.l:
+        p2Control.l = false;
+        break;
+      case p2Keys.d:
+        p2Control.d = false;
+        break;
+      case p2Keys.r:
+        p2Control.r = false;
+        break;
+    }
+  }
+
+  function main(){
+    canvas = document.createElement("canvas");
+
+    canvas.width = width;
+    canvas.height = height;
+
+    ctx = canvas.getContext("2d");
+
+    window.addEventListener("keydown", keyDown, false);
+    window.addEventListener("keyup", keyUp, false);
+
+    ctx.font = "20px Arial";
+
+    document.body.appendChild(canvas);
+
+    run();
+  }
+
+  function run(){
+    update();
+    render();
+    window.requestAnimationFrame(run);
+  }
+
+  function update(){
+
+    controlBall(p1, p1Control);
+    boundBall(p1);
+
+    controlBall(p2, p2Control);
+    boundBall(p2);
+
+    checkCollision(p1, p2);
+
+  	//OFFSET
+
+  	var auxX = Math.min(p1.x, p2.x) + (Math.max(p1.x, p2.x) - Math.min(p1.x, p2.x))/2;
+  	var auxY = Math.min(p1.y, p2.y) + (Math.max(p1.y, p2.y) - Math.min(p1.y, p2.y))/2;
+
+  	//offset.x = (-width/2 + auxX);
+  	//offset.y = (-height/2 + auxY);
+
+  	//ZOOM
+
+  	var disX = (Math.abs(p1.x - p2.x))/(width*scl);
+  	var disY = (Math.abs(p1.y - p2.y))/(height*scl);
+
+    zoom = 1 - Math.max(disX, disY);
+  	if(zoom < 1/scl)
+  		zoom = 1/scl;
+
+    offset.x -= width/2*scl*(disX);
+  	offset.y -= height/2*scl*(disY);
+
+    /*
+    if(offset.x < 0)
+      offset.x = 0;
+    if(offset.y < 0)
+      offset.y = 0;
+
+    if(offset.x > width*(scl-1))
+      offset.x = width*(scl-1);
+    if(offset.y > height*(scl-1))
+      offset.y = height*(scl-1);
+    */
+
+  }
+
+  function render(){
+    ctx.fillStyle = "#FFF";
+    ctx.fillRect(0, 0, width, height);
+
+    ctx.fillStyle = "#0F0";
+    ctx.beginPath();
+    ctx.arc(width/2, height/2, 5, 2*Math.PI, false);
+    ctx.fill();
+
+    ctx.save();
+    ctx.scale(zoom, zoom);
+
+    ctx.fillStyle = "#F00";
+    drawBall(p1);
+
+    ctx.fillStyle = "#00F";
+    drawBall(p2);
+
+    var auxX = Math.min(p1.x, p2.x) + (Math.max(p1.x, p2.x) - Math.min(p1.x, p2.x))/2;
+    var auxY = Math.min(p1.y, p2.y) + (Math.max(p1.y, p2.y) - Math.min(p1.y, p2.y))/2;
+
+    ctx.beginPath();
+    ctx.arc(auxX -offset.x, auxY -offset.y, 10, 0, 2*Math.PI, false);
+    ctx.fill();
+
+    var wallWidth = 2000;
+
+    ctx.fillStyle = "#000";
+    ctx.fillRect(0 -wallWidth -offset.x, 0 -offset.y, width*scl +wallWidth*2, -wallWidth);
+    ctx.fillRect(0 -wallWidth -offset.x, height*scl -offset.y, width*scl +wallWidth*2, wallWidth);
+    ctx.fillRect(0 -offset.x, 0 -wallWidth -offset.y, -wallWidth, height*scl +2*wallWidth);
+    ctx.fillRect(width*scl -offset.x, 0 -wallWidth -offset.y, wallWidth, height*scl +2*wallWidth);
+
+    ctx.restore();
+
+    ctx.fillStyle = "#F00";
+    ctx.fillText(zoom, 50, 50);
+    ctx.fillText(offset.x, 50, 70);
+    ctx.fillText(offset.y, 50, 90);
+
+  }
+
+  main();
+
+</script>
+</body>
+</html>
