@@ -35,7 +35,7 @@ function circleRectCollision(circle, rect){
   var deltaX = circle.x - Math.max(rect.x, Math.min(circle.x, rect.x + rect.width));
   var deltaY = circle.y - Math.max(rect.y, Math.min(circle.y, rect.y + rect.height));
 
-  return (deltaX * deltaX + deltaY * deltaY) < (circle.raio * circle.raio);
+  return (deltaX * deltaX + deltaY * deltaY) < (circle.radius * circle.radius);
 }
 
 function rectCollision(square1, square2){
