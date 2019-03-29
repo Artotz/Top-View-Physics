@@ -18,7 +18,7 @@
     fps = 0,
     lastCalledTime = 0,
 
-  	scl = 5,
+  	scl = 2,
   	zoom = 1,
   	offset = {x: 0, y: 0},
 
@@ -32,20 +32,16 @@
     p1Control = {u: false, l: false, d: false, r: false},
     p2Control = {u: false, l: false, d: false, r: false},
 
-    food = {x: 100, y: 100, radius: 10},
+    food = {x: 100, y: 100, radius: 30},
+    food2 = {x: 100, y: 100, radius: 30},
 
-    gI = 10,
-    gJ = 20,
-    grid = [[0,0,1,0,1,0,0,1,0,1,0,0,0,0,0,1,0,0,0,0],
-            [1,0,1,0,1,0,0,1,0,0,0,1,1,0,1,1,1,0,1,1],
-            [1,0,0,0,1,1,0,1,0,0,1,0,0,0,0,0,0,0,0,0],
-            [1,0,1,0,0,0,0,1,0,1,0,0,1,0,1,0,1,0,1,0],
-            [1,0,1,1,1,1,0,0,0,1,1,1,1,0,0,1,0,0,1,0],
-            [1,0,1,0,0,0,0,1,0,1,0,0,1,0,1,0,1,0,1,0],
-            [1,0,0,0,1,1,0,1,0,0,1,0,0,0,0,0,0,0,0,0],
-            [1,0,1,0,1,0,0,1,0,0,0,1,1,0,1,1,1,0,1,1],
-            [0,0,1,0,1,0,0,1,0,1,0,0,0,0,0,1,0,0,0,0],
-            [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]];
+    gI = 5,
+    gJ = 10,
+    grid = [[0,0,0,0,1,0,0,0,0,0],
+            [0,1,1,0,0,0,1,0,1,0],
+            [0,0,0,0,1,0,0,0,1,0],
+            [0,1,0,0,1,0,0,0,0,0],
+            [0,0,1,0,0,1,0,0,1,0]];
 
 
   /*
@@ -97,13 +93,21 @@
 
       Ball2.dx = velAbs*v.x;
       Ball2.dy = velAbs*v.y;
+
+      if(Ball.energy > 0 || Ball2.energy > 0){
+        Ball.dx  = Ball.dy  = Ball.accel  = Ball.angle  = Ball.energy  = 0;
+        Ball2.dx = Ball2.dy = Ball2.accel = Ball2.angle = Ball2.energy = 0;
+
+        randomAll();
+      }
+
     }
   }
 
   function controlBall(Ball, Control){
     var acc = 0.025;
     var accMax = 0.5;
-    var angleSpd = 2/50;
+    var angleSpd = 1/40;
 
     if(Control.l){
       if(Ball.angle == 0)
@@ -207,6 +211,15 @@
 
   }
 
+  function randomAll(){
+    createGrid();
+
+    randomPosBall(p1);
+    randomPosBall(p2);
+    randomPosBall(food);
+    randomPosBall(food2);
+  }
+
   function boundBall(Ball){
     if(Ball.x + Ball.radius > width * scl){
       Ball.x = width * scl - Ball.radius;
@@ -229,33 +242,41 @@
 
   function drawBall(Ball){
 
-    Ball.ghost.unshift({x: Ball.x, y: Ball.y});
+    if(Ball.energy > 0)
+      Ball.ghost.unshift({x: Ball.x, y: Ball.y});
 
-    if(Ball.ghost.length > 30){
-      Ball.ghost.pop();
+    if(Ball.energy > 0){
+      if(Ball.ghost.length > 30)
+        Ball.ghost.pop();
     }
+    else
+      Ball.ghost = [];
 
-    var color = ["#9444D3","#4B4482","#4444FF","#44FF44","#FFFF44","#FF7F44","#FF4444"];
-    for(var i = Ball.ghost.length-1; i >= 0; i--){
-      ctx.globalAlpha = 1 - (i/Ball.ghost.length);
+    if(Ball.energy > 0){
+      Ball.energy--;
+      var color = ["#9444D3","#4B4482","#4444FF","#44FF44","#FFFF44","#FF7F44","#FF4444"];
+      for(var i = Ball.ghost.length-1; i >= 0; i--){
+        ctx.globalAlpha = 1 - (i/Ball.ghost.length);
+        ctx.beginPath();
+        ctx.arc(Ball.ghost[i].x -offset.x, Ball.ghost[i].y -offset.y, Ball.radius -(i), 0, 2*Math.PI, false);
+        ctx.fillStyle = color[(Math.floor(frames/2)-i)%color.length];
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+
+      
+      ctx.globalAlpha = 1/10;
+
+      ctx.fillStyle = "#FFF";
       ctx.beginPath();
-      ctx.arc(Ball.ghost[i].x -offset.x, Ball.ghost[i].y -offset.y, Ball.radius -(i), 0, 2*Math.PI, false);
-      ctx.fillStyle = color[(Math.floor(frames/2)-i)%color.length];
+      ctx.arc(Ball.x -offset.x, Ball.y -offset.y, Ball.radius +20 +20*Math.sin(frames/10), 0, 2*Math.PI, false);
       ctx.fill();
+      ctx.globalAlpha = 1;
+
+      
+      ctx.fillStyle = color[(Math.floor(frames/2)+1)%color.length];
     }
-    ctx.globalAlpha = 1;
 
-    
-    ctx.globalAlpha = 1/10;
-
-    ctx.fillStyle = "#FFF";
-    ctx.beginPath();
-    ctx.arc(Ball.x -offset.x, Ball.y -offset.y, Ball.radius +20 +20*Math.sin(frames/10), 0, 2*Math.PI, false);
-    ctx.fill();
-    ctx.globalAlpha = 1;
-
-    
-    ctx.fillStyle = color[(Math.floor(frames/2)+1)%color.length];
     ctx.beginPath();
     ctx.arc(Ball.x -offset.x, Ball.y -offset.y, Ball.radius, 0, 2*Math.PI, false);
     ctx.fill();
@@ -276,6 +297,20 @@
       ctx.stroke();
     */
     
+  }
+
+  function createGrid(){
+    for(var i = 0; i < gI; i++){
+      for(var j = 0; j < gJ; j++){
+        var random = randint (0, 100);
+
+        if(random < 20)
+          grid[i][j] = 1;
+        else
+          grid[i][j] = 0;
+      }
+    }
+
   }
 
   function drawGrid(){
@@ -366,8 +401,7 @@
 
     document.body.appendChild(canvas);
 
-    randomPosBall(p1);
-    randomPosBall(p2);
+    randomAll();
 
     lastCalledTime = performance.now();
 
@@ -398,6 +432,31 @@
 
     checkCollision(p1, p2);
 
+    if(circleCollision(p1, food)){
+      p1.score++;
+      p1.energy += 100;
+
+      randomPosBall(food);
+    }
+    if(circleCollision(p1, food2)){
+      p1.score++;
+      p1.energy += 100;
+
+      randomPosBall(food2);
+    }
+    
+    if(circleCollision(p2, food)){
+      p2.score++;
+      p2.energy += 100;
+
+      randomPosBall(food);
+    }
+    if(circleCollision(p2, food2)){
+      p2.score++;
+      p2.energy += 100;
+
+      randomPosBall(food2);
+    }
 
   	//ZOOM
     var disX = Math.abs(p1.x - p2.x);
@@ -408,24 +467,24 @@
 
     //zoom = Math.min(aux1, aux2);
 
-    //zoom = 1/scl;
+    zoom = 1/scl;
 
-    zoom = 1;
+    //zoom = 1;
 
     if(zoom > 1) zoom = 1;
     else if(zoom < 1/scl) zoom = 1/scl;
 
   	//OFFSET
-  	var auxX = Math.min(p1.x, p2.x) + (Math.max(p1.x, p2.x) - Math.min(p1.x, p2.x))/2;
-  	var auxY = Math.min(p1.y, p2.y) + (Math.max(p1.y, p2.y) - Math.min(p1.y, p2.y))/2;
-    //var auxX = width*scl/2;
-    //var auxY = height*scl/2;
+  	//var auxX = Math.min(p1.x, p2.x) + (Math.max(p1.x, p2.x) - Math.min(p1.x, p2.x))/2;
+  	//var auxY = Math.min(p1.y, p2.y) + (Math.max(p1.y, p2.y) - Math.min(p1.y, p2.y))/2;
+    var auxX = width*scl/2;
+    var auxY = height*scl/2;
 
-  	//offset.x = (-(1/zoom)*width/2 + auxX);
-    //offset.y = (-(1/zoom)*height/2 + auxY);
+  	offset.x = (-(1/zoom)*width/2 + auxX);
+    offset.y = (-(1/zoom)*height/2 + auxY);
     
-  	offset.x = (-(1/zoom)*width/2 + p1.x);
-  	offset.y = (-(1/zoom)*height/2 + p1.y);
+  	//offset.x = (-(1/zoom)*width/2 + p1.x);
+  	//offset.y = (-(1/zoom)*height/2 + p1.y);
 
   }
 
@@ -440,6 +499,16 @@
 
     ctx.save();
     ctx.scale(zoom, zoom);
+
+    ctx.fillStyle = "#FFF";
+    ctx.beginPath();
+    ctx.arc(food.x -offset.x, food.y -offset.y, food.radius, 2*Math.PI, false);
+    ctx.fill();
+
+    ctx.fillStyle = "#FFF";
+    ctx.beginPath();
+    ctx.arc(food2.x -offset.x, food2.y -offset.y, food2.radius, 2*Math.PI, false);
+    ctx.fill();
 
     ctx.fillStyle = "#F00";
     drawBall(p1);
@@ -463,13 +532,14 @@
     ctx.restore();
 
     ctx.fillStyle = "#F00";
-    ctx.fillText(zoom.toFixed(2), 25, 25);
     var bI, bJ;
     bI = Math.floor(p1.y / (height*scl/gI));
     bJ = Math.floor(p1.x / (width*scl/gJ));
-    ctx.fillText(bI, 25, 45);
-    ctx.fillText(bJ, 25, 65);
-      ctx.fillText("FPS: " + fps.toFixed(0), 25, 85);
+
+    ctx.fillText("FPS: " + fps.toFixed(0), 25, 25);
+    //ctx.fillText(zoom.toFixed(2), 25, 45);
+    //ctx.fillText(bI, 25, 65);
+    //ctx.fillText(bJ, 25, 85);
   }
 
   main();
